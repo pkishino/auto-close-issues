@@ -7,12 +7,12 @@
     "url": "https://github.com/lucasbento"
   },
   "dependencies": {
-    "@actions/core": "^1.2.0",
-    "@actions/github": "^2.0.0",
+    "@actions/core": "^1.2.4",
+    "@actions/github": "^2.2.0",
     "mdjson": "^2.0.1"
   },
   "devDependencies": {
-    "@zeit/ncc": "^0.21.0"
+    "@zeit/ncc": "^0.21.1"
   },
   "homepage": "https://github.com/lucasbento/auto-close-issues",
   "keywords": [
