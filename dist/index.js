@@ -14006,8 +14006,9 @@ const getIssueCloseMessage = () => {
 async function run() {
   try {
 
-    const token = core.getInput("repo-token", { required: true });
-    const client = new github.getOctokit(token);
+    const client = new github.getOctokit(
+      core.getInput("github-token", { required: true })
+    );
 
     const { payload } = github.context;
 
