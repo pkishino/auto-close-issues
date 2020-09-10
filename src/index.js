@@ -19,93 +19,100 @@ const getIssueCloseMessage = () => {
   )(...Object.values(payload));
 };
 
-(async () => {
-  const client = new github.GitHub(
-    core.getInput("github-token", { required: true })
-  );
+async function run() {
+  try {
 
-  const { payload } = github.context;
+    const token = core.getInput("repo-token", { required: true });
+    const client = new github.getOctokit(token);
 
-  const issueBodyMarkdown = payload.issue.body;
-  // Get all the markdown titles from the issue body
-  const issueBodyTitles = Object.keys(mdjson(issueBodyMarkdown));
+    const { payload } = github.context;
 
-  // Get a list of the templates
-  const issueTemplates = fs.readdirSync(ISSUE_TEMPLATE_DIR);
+    const issueBodyMarkdown = payload.issue.body;
+    // Get all the markdown titles from the issue body
+    const issueBodyTitles = Object.keys(mdjson(issueBodyMarkdown));
 
-  // Compare template titles with issue body
-  const doesIssueMatchAnyTemplate = issueTemplates.some(template => {
-    const templateMarkdown = fs.readFileSync(
-      `${ISSUE_TEMPLATE_DIR}/${template}`,
-      "utf-8"
-    );
-    const templateTitles = Object.keys(mdjson(templateMarkdown));
+    // Get a list of the templates
+    const issueTemplates = fs.readdirSync(ISSUE_TEMPLATE_DIR);
 
-    return templateTitles.every(title => issueBodyTitles.includes(title));
-  });
+    // Compare template titles with issue body
+    const doesIssueMatchAnyTemplate = issueTemplates.some(template => {
+      const templateMarkdown = fs.readFileSync(
+        `${ISSUE_TEMPLATE_DIR}/${template}`,
+        "utf-8"
+      );
+      const templateTitles = Object.keys(mdjson(templateMarkdown));
 
-  const { issue } = github.context;
-  const closedIssueLabel = core.getInput("closed-issues-label");
+      return templateTitles.every(title => issueBodyTitles.includes(title));
+    });
 
-  if (doesIssueMatchAnyTemplate || payload.action !== "opened") {
-    // Only reopen the issue if there's a `closed-issues-label` so it knows that
-    // it was previously closed because of the wrong template
-    if (payload.issue.state === "closed" && closedIssueLabel) {
-      const labels = (
-        await client.issues.listLabelsOnIssue({
+    const { issue } = github.context;
+    const closedIssueLabel = core.getInput("closed-issues-label");
+
+    if (doesIssueMatchAnyTemplate || payload.action !== "opened") {
+      // Only reopen the issue if there's a `closed-issues-label` so it knows that
+      // it was previously closed because of the wrong template
+      if (payload.issue.state === "closed" && closedIssueLabel) {
+        const labels = (
+          await client.issues.listLabelsOnIssue({
+            owner: issue.owner,
+            repo: issue.repo,
+            issue_number: issue.number
+          })
+        ).data.map(({ name }) => name);
+
+        if (!labels.includes(closedIssueLabel)) {
+          return;
+        }
+
+        await client.issues.removeLabel({
           owner: issue.owner,
           repo: issue.repo,
-          issue_number: issue.number
-        })
-      ).data.map(({ name }) => name);
+          issue_number: issue.number,
+          name: closedIssueLabel
+        });
 
-      if (!labels.includes(closedIssueLabel)) {
+        await client.issues.update({
+          owner: issue.owner,
+          repo: issue.repo,
+          issue_number: issue.number,
+          state: "open"
+        });
+
         return;
       }
-
-      await client.issues.removeLabel({
-        owner: issue.owner,
-        repo: issue.repo,
-        issue_number: issue.number,
-        name: closedIssueLabel
-      });
-
-      await client.issues.update({
-        owner: issue.owner,
-        repo: issue.repo,
-        issue_number: issue.number,
-        state: "open"
-      });
 
       return;
     }
 
-    return;
-  }
+    // If an closed issue label was provided, add it to the issue
+    if (closedIssueLabel) {
+      await client.issues.addLabels({
+        owner: issue.owner,
+        repo: issue.repo,
+        issue_number: issue.number,
+        labels: [closedIssueLabel]
+      });
+    }
 
-  // If an closed issue label was provided, add it to the issue
-  if (closedIssueLabel) {
-    await client.issues.addLabels({
+    // Add the issue closing comment
+    await client.issues.createComment({
       owner: issue.owner,
       repo: issue.repo,
       issue_number: issue.number,
-      labels: [closedIssueLabel]
+      body: getIssueCloseMessage()
     });
-  }
 
-  // Add the issue closing comment
-  await client.issues.createComment({
-    owner: issue.owner,
-    repo: issue.repo,
-    issue_number: issue.number,
-    body: getIssueCloseMessage()
-  });
+    // Close the issue
+    await client.issues.update({
+      owner: issue.owner,
+      repo: issue.repo,
+      issue_number: issue.number,
+      state: "closed"
+    });
+  } catch (error) {
+      core.error(error);
+      core.setFailed(error.message);
+    }
+};
 
-  // Close the issue
-  await client.issues.update({
-    owner: issue.owner,
-    repo: issue.repo,
-    issue_number: issue.number,
-    state: "closed"
-  });
-})();
+run();
