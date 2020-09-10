@@ -28,6 +28,8 @@ async function run() {
 
     const { payload } = github.context;
 
+    console.log(payload)
+
     const issueBodyMarkdown = payload.issue.body;
     // Get all the markdown titles from the issue body
     const issueBodyTitles = Object.keys(mdjson(issueBodyMarkdown));
