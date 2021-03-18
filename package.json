@@ -1,20 +1,21 @@
 {
   "name": "auto-close-issues",
   "description": "Automatically close issues that don't follow the issue template",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "author": {
-    "name": "Lucas Bento",
-    "url": "https://github.com/lucasbento"
+    "name": "Patrick Kishino",
+    "url": "https://github.com/pkishino"
   },
   "dependencies": {
     "@actions/core": "^1.2.5",
     "@actions/github": "^4.0.0",
+    "gfm-code-blocks": "^1.0.0",
     "mdjson": "^2.0.1"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.24.0"
   },
-  "homepage": "https://github.com/Stanzilla/auto-close-issues",
+  "homepage": "https://github.com/pkishino/auto-close-issues",
   "keywords": [
     "actions",
     "automatic",
@@ -23,7 +24,7 @@
   ],
   "license": "MIT",
   "main": "src/index.js",
-  "repository": "https://github.com/Stanzilla/auto-close-issues",
+  "repository": "https://github.com/pkishino/auto-close-issues",
   "scripts": {
     "build": "ncc cache clean && ncc build src/index.js"
   }

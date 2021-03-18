@@ -3995,6 +3995,65 @@ module.exports = detab;
 
 /***/ }),
 
+/***/ 8603:
+/***/ ((module) => {
+
+"use strict";
+/*!
+ * gfm-code-block-regex <https://github.com/regexhq/gfm-code-block-regex>
+ *
+ * Copyright (c) 2014, 2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+module.exports = function() {
+  return /^(([ \t]*`{3,4})([^\n]*)([\s\S]+?)(^[ \t]*\2))/gm;
+};
+
+
+/***/ }),
+
+/***/ 2261:
+/***/ ((module, __unused_webpack_exports, __webpack_require__) => {
+
+"use strict";
+/*!
+ * gfm-code-blocks <https://github.com/jonschlinkert/gfm-code-blocks>
+ *
+ * Copyright (c) 2014-2015, 2017, Jon Schlinkert.
+ * Released under the MIT License.
+ */
+
+
+
+var gfmRegex = __webpack_require__(8603);
+
+module.exports = function(str) {
+  if (typeof str !== 'string') {
+    throw new TypeError('expected a string');
+  }
+
+  var regex = gfmRegex();
+  var blocks = [];
+  var match = null;
+
+  while ((match = regex.exec(str))) {
+    blocks.push({
+      start: match.index,
+      end: match.index + match[1].length,
+      lang: match[3],
+      code: match[4],
+      block: match[1]
+    });
+  }
+  return blocks;
+};
+
+
+/***/ }),
+
 /***/ 3527:
 /***/ (function(module, exports, __webpack_require__) {
 
@@ -13986,6 +14045,7 @@ const fs = __webpack_require__(5747);
 const core = __webpack_require__(2186);
 const github = __webpack_require__(5438);
 const mdjson = __webpack_require__(3045);
+const codeBlocks = __webpack_require__(2261);
 
 const ISSUE_TEMPLATE_DIR = ".github/ISSUE_TEMPLATE";
 
@@ -14011,31 +14071,40 @@ async function run() {
     );
 
     const { payload } = github.context;
-
-    console.log(payload)
-
+    console.log(payload);
     const issueBodyMarkdown = payload.issue.body;
     // Get all the markdown titles from the issue body
     const issueBodyTitles = Object.keys(mdjson(issueBodyMarkdown));
-
     // Get a list of the templates
-    const issueTemplates = fs.readdirSync(ISSUE_TEMPLATE_DIR);
+    const issueTemplates = fs.readdirSync(ISSUE_TEMPLATE_DIR).filter(fileName =>  fileName.endsWith('.md'));
+    
+    const cbs=codeBlocks(issueBodyMarkdown);
+    
+    // Check if code blocks are valid
+    const codeBlocksValid = cbs.every(block => {
+      // check that it doesn't match placeholder and isn't empty
+      const match = block.code !== '\n<placeholder>\r\n' && block.code !== '\n<-- Paste here -->\r\n' && block.code.length > 0;
+      return match;
+    });
+
+    //Check for all boxes ticked
+    const countUnticked = (issueBodyMarkdown.match(/- \[(?![xX]+\])[\s]*[xX]*[\s]*\]/g)|| []).length;
 
     // Compare template titles with issue body
-    const doesIssueMatchAnyTemplate = issueTemplates.some(template => {
+    const isIssueValid = issueTemplates.some(template => {
       const templateMarkdown = fs.readFileSync(
         `${ISSUE_TEMPLATE_DIR}/${template}`,
         "utf-8"
       );
+      // Check if all titles are there
       const templateTitles = Object.keys(mdjson(templateMarkdown));
-
       return templateTitles.every(title => issueBodyTitles.includes(title));
     });
 
     const { issue } = github.context;
     const closedIssueLabel = core.getInput("closed-issues-label");
 
-    if (doesIssueMatchAnyTemplate || payload.action !== "opened") {
+    if (isIssueValid && codeBlocksValid && countUnticked==0) {
       // Only reopen the issue if there's a `closed-issues-label` so it knows that
       // it was previously closed because of the wrong template
       if (payload.issue.state === "closed" && closedIssueLabel) {
@@ -14067,7 +14136,6 @@ async function run() {
 
         return;
       }
-
       return;
     }
 

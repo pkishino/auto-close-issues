@@ -1,6 +1,6 @@
 name: "Auto close issues"
-description: "Automatically close issues that don't follow the issue template"
-author: "Lucas Bento"
+description: "Automatically close issues that don't follow the issue template, updated (based on @lucasbento work)"
+author: "Patrick Kishino"
 
 branding:
   icon: "archive"

@@ -2,7 +2,13 @@
 
 ## How it works
 
-This GitHub action will fetch all the files inside of `.github/ISSUE_TEMPLATE`, parse the titles and compare those titles with the content of the opened/edited issue, if they don't match, it will:
+This GitHub action will fetch all the files inside of `.github/ISSUE_TEMPLATE`
+then it will:
+1. Parse the titles and compare those titles with the content of the opened/edited issue (to aovid people removing parts)
+2. Parse the code blocks of check against template code blocks (to check that people have input data)
+3. Check that tick boxes have been marked properly
+
+ if they don't match, it will:
 
 1. Add a label to the issue (configurable with the input property `closed-issues-label`);
    > This step won't run if no label is provided.
@@ -29,7 +35,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v1
       - name: "Automatically close issues that don't follow the issue template"
-        uses: stanzilla/auto-close-issues@v1.0.5
+        uses: pkishino/auto-close-issues@<release-number>
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           issue-close-message: "@${issue.user.login}: hello! :wave:\n\nThis issue is being automatically closed because it does not follow the issue template." # optional property
